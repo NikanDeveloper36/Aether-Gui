@@ -57,8 +57,8 @@ if os.path.isfile(ICON_PATH):
     except Exception:
         pass
 
-PROTOCOLS = ["MASQUE (HTTP/3)", "MASQUE (HTTP/2)", "WireGuard", "WARP-in-WARP"]
-SCAN_MODES = ["Balanced", "Turbo", "Thorough", "Stealth", "Ironclad"]
+PROTOCOLS = ["WireGuard", "MASQUE (HTTP/3)", "MASQUE (HTTP/2)", "WARP-in-WARP"]
+SCAN_MODES = ["Ironclad", "Thorough", "Stealth", "Balanced", "Turbo"]
 
 STATE_IDLE = "idle"
 STATE_LAUNCHING = "launching"
@@ -537,7 +537,7 @@ class AetherGUI(ctk.CTk):
 
         ctk.CTkLabel(opts, text="Protocol:", font=("Segoe UI", 11),
                       text_color=COLORS["text_muted"]).pack(side="left", padx=(12, 6), pady=10)
-        self.protocol_var = ctk.StringVar(value="MASQUE (HTTP/3)")
+        self.protocol_var = ctk.StringVar(value="WireGuard")
         self.protocol_menu = ctk.CTkOptionMenu(opts, variable=self.protocol_var, values=PROTOCOLS,
                            command=self._on_protocol_change,
                            width=160, corner_radius=8, fg_color=COLORS["surface2"])
@@ -545,7 +545,7 @@ class AetherGUI(ctk.CTk):
 
         ctk.CTkLabel(opts, text="Scan:", font=("Segoe UI", 11),
                       text_color=COLORS["text_muted"]).pack(side="left", padx=(16, 6), pady=10)
-        self.scan_var = ctk.StringVar(value="Balanced")
+        self.scan_var = ctk.StringVar(value="Ironclad")
         self.scan_menu = ctk.CTkOptionMenu(opts, variable=self.scan_var, values=SCAN_MODES,
                            width=120, corner_radius=8, fg_color=COLORS["surface2"])
         self.scan_menu.pack(side="left", pady=10)
@@ -636,6 +636,16 @@ class AetherGUI(ctk.CTk):
         ctk.CTkOptionMenu(row6, variable=self.noize_var,
                            values=["Disabled", "Light", "Balanced", "Aggressive"],
                            width=110, corner_radius=8, fg_color=COLORS["surface2"]).pack(side="right", padx=14, pady=10)
+
+        # Force Peer - for custom WireGuard endpoint (VPS IP:port)
+        row7 = ctk.CTkFrame(page, fg_color=COLORS["surface"], corner_radius=10)
+        row7.pack(fill="x", padx=32, pady=3)
+        ctk.CTkLabel(row7, text="Force WireGuard Peer (VPS)", font=("Segoe UI", 12),
+                      text_color=COLORS["text"]).pack(side="left", padx=14, pady=10)
+        self.peer_entry = ctk.CTkEntry(row7, width=160, corner_radius=8,
+                                        fg_color=COLORS["surface2"], border_color=COLORS["border"],
+                                        text_color=COLORS["text"], placeholder_text="IP:PORT (e.g. 1.2.3.4:51820)")
+        self.peer_entry.pack(side="right", padx=14, pady=10)
 
         ctk.CTkButton(page, text="💾  Save Settings", height=38, corner_radius=10,
                        fg_color=COLORS["accent"], hover_color="#e06a10",
@@ -786,6 +796,10 @@ class AetherGUI(ctk.CTk):
 
         if "WireGuard" in proto:
             cmd.append("--wg")
+            # Force WireGuard peer (VPS endpoint) if specified
+            peer = self.peer_entry.get().strip()
+            if peer and ":" in peer:
+                cmd += ["--wg-peer", peer]
         elif "WARP-in-WARP" in proto:
             cmd.append("--gool")
         else:
@@ -1096,6 +1110,7 @@ class AetherGUI(ctk.CTk):
             "noize": self.noize_var.get(),
             "protocol": self.protocol_var.get(),
             "scan": self.scan_var.get(),
+            "wg_peer": self.peer_entry.get().strip(),
         }
         cfg_path = os.path.join(APP_DIR, "aether_gui.json")
         with open(cfg_path, "w") as f:
@@ -1119,8 +1134,10 @@ class AetherGUI(ctk.CTk):
             self.dns_entry.insert(0, cfg.get("dns", "1.1.1.1, 1.0.0.1"))
             self.ip_var.set(cfg.get("ip_version", "Dual"))
             self.noize_var.set(cfg.get("noize", "Disabled"))
-            self.protocol_var.set(cfg.get("protocol", "MASQUE (HTTP/3)"))
-            self.scan_var.set(cfg.get("scan", "Balanced"))
+            self.protocol_var.set(cfg.get("protocol", "WireGuard"))
+            self.scan_var.set(cfg.get("scan", "Ironclad"))
+            self.peer_entry.delete(0, "end")
+            self.peer_entry.insert(0, cfg.get("wg_peer", ""))
         except Exception:
             pass
 
