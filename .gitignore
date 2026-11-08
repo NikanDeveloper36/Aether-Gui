@@ -33,3 +33,6 @@ aether.exe
 aether.toml
 *.zip
 frame_*.jpg
+
+# Installer output
+installer/output/

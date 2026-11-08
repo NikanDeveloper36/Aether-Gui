@@ -13,7 +13,7 @@ ICON_PATH = os.path.join(APP_DIR, "icon.ico")
 
 import customtkinter as ctk
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 MAX_AUTO_RETRIES = 3
 RETRY_BACKOFF = [2, 5, 10]
 
