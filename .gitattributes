@@ -1,0 +1,15 @@
+# Keep shell scripts LF everywhere — a CRLF shebang fails on Linux/macOS
+# with "bad interpreter: /bin/bash^M" and the whole build dies.
+*.sh      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.py      text eol=lf
+*.md      text eol=lf
+*.txt     text eol=lf
+*.iss     text eol=crlf
+*.desktop text eol=lf
+
+*.png     binary
+*.ico     binary
+*.icns    binary
+*.exe     binary
