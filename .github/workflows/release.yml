@@ -25,6 +25,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Read the version from the source, not the ref: on a branch push
+      # github.ref_name is "main", which is not a valid package version and
+      # makes dpkg-deb refuse the control file.
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          $m = Select-String -Path src/aether_gui.py -Pattern 'VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"'
+          $v = $m.Matches[0].Groups[1].Value
+          "GUI_VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "version: $v"
+
       - name: Install build dependencies
         run: pip install customtkinter pyinstaller pillow
 
@@ -51,16 +62,14 @@ jobs:
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y
-          $ver = "${{ github.ref_name }}".TrimStart('v')
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            "/DMyAppVersion=$ver" "/DAppDir=$PWD" "installer\windows\AetherGUI.iss"
+            "/DMyAppVersion=$env:GUI_VERSION" "/DAppDir=$PWD" "installer\windows\AetherGUI.iss"
           Get-ChildItem installer/output
 
       - name: Build the portable ZIP
         shell: pwsh
         run: |
-          $ver = "${{ github.ref_name }}".TrimStart('v')
-          $pkg = "AetherGUI-$ver-Windows-x64-portable"
+          $pkg = "AetherGUI-$env:GUI_VERSION-Windows-x64-portable"
           New-Item -ItemType Directory -Force -Path $pkg | Out-Null
           Copy-Item dist/AetherGUI.exe $pkg/
           Copy-Item aether.exe $pkg/
@@ -85,6 +94,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Resolve version
+        run: |
+          v=$(grep -oE 'VERSION = "[0-9]+\.[0-9]+\.[0-9]+"' src/aether_gui.py \
+              | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "GUI_VERSION=$v" >> "$GITHUB_ENV"
+          echo "version: $v"
 
       - name: Install build dependencies
         run: |
@@ -120,7 +136,7 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
           chmod +x installer/linux/package.sh
-          ./installer/linux/package.sh "${GITHUB_REF_NAME#v}" amd64
+          ./installer/linux/package.sh "$GUI_VERSION" amd64
 
       - uses: actions/upload-artifact@v4
         with:
@@ -136,10 +152,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14      # Apple Silicon
+          - os: macos-15        # Apple Silicon (macos-latest is arm64)
             arch: arm64
             engine: aether-macos-arm64.tar.gz
-          - os: macos-13      # Intel
+          - os: macos-15-intel  # Intel x64 (macos-13 and macos-14 are retired)
             arch: x64
             engine: aether-macos-x86_64.tar.gz
     steps:
@@ -148,6 +164,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Resolve version
+        run: |
+          v=$(grep -oE 'VERSION = "[0-9]+\.[0-9]+\.[0-9]+"' src/aether_gui.py \
+              | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "GUI_VERSION=$v" >> "$GITHUB_ENV"
+          echo "version: $v"
 
       - name: Install build dependencies
         run: pip install customtkinter pyinstaller pillow
@@ -173,7 +196,7 @@ jobs:
       - name: Package the .dmg
         run: |
           chmod +x installer/macos/package.sh
-          ./installer/macos/package.sh "${GITHUB_REF_NAME#v}" "${{ matrix.arch }}"
+          ./installer/macos/package.sh "$GUI_VERSION" "${{ matrix.arch }}"
 
       - uses: actions/upload-artifact@v4
         with:
